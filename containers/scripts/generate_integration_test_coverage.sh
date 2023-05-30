@@ -96,7 +96,7 @@ main() {
         SCAN_STATUS=`podman exec osh-client "${CLI_XML[@]}" --hub http://osh-hub:8000/xmlrpc/kerbauth/ --username=user --password=xxxxxx get-scan-state 2 2>&1`
     done;
 
-    [[ $SCAN_STATUS == *"NEEDS_INSPECTION"* ]]
+    [[ $SCAN_STATUS == *"PASSED"* ]]
 
     # verify that main task has the right priority
     curl http://localhost:8000/task/8/ | grep -Pzo "<th>Priority</th>\n    <td>21</td>"
@@ -118,7 +118,7 @@ main() {
     curl http://localhost:8000/task/11/ | grep -Pzo "<th>Priority</th>\n    <td>11</td>"
 
     # priority offset feature testing end
-    # podman exec osh-client /usr/bin/coverage-3.6 run --parallel-mode '--omit=*site-packages*,*kobo*,' osh/hub/scripts/osh-xmlrpc-client.py --hub http://osh-hub:8000/xmlrpc/kerbauth/ --username=user --password=xxxxxx create-scan -b units-2.21-5.fc$FEDORA_VERSION -t units-2.21-5.fc$FEDORA_VERSION --et-scan-id=1 --release=Fedora-37 --owner=admin --advisory-id=1
+    podman exec osh-client /usr/bin/coverage-3.6 run --parallel-mode '--omit=*site-packages*,*kobo*,' osh/hub/scripts/osh-xmlrpc-client.py --hub http://osh-hub:8000/xmlrpc/kerbauth/ --username=user --password=xxxxxx create-scan -b units-2.21-5.fc$FEDORA_VERSION -t units-2.21-5.fc$FEDORA_VERSION --et-scan-id=1 --release=Fedora-37 --owner=admin --advisory-id=1
 
     # test generation of usage statistics
     podman exec osh-hub /usr/bin/coverage-3.6 run --parallel-mode '--omit=*site-packages*,*kobo*,' osh/hub/scripts/osh-stats
