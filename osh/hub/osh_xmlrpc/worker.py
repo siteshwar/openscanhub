@@ -10,12 +10,16 @@ from kobo.django.upload.models import FileUpload
 from kobo.hub.decorators import validate_worker
 from kobo.hub.models import Task
 from kobo.hub.xmlrpc.worker import interrupt_tasks as kobo_interrupt_tasks
+from kobo.hub.xmlrpc.worker import open_task as kobo_open_task
+from kobo.hub.xmlrpc.worker import close_task as kobo_close_task
+from kobo.hub.xmlrpc.worker import cancel_task as kobo_cancel_task
+from kobo.hub.xmlrpc.worker import fail_task as kobo_fail_task
 
 from osh.hub.errata.models import ScanningSession
 from osh.hub.errata.scanner import (BaseNotValidException, obtain_base,
                                     prepare_base_scan)
 from osh.hub.scan.models import (SCAN_STATES, AnalyzerVersion, AppSettings,
-                                 Scan, ScanBinding)
+                                 Scan, ScanBinding, ResallocMapping)
 from osh.hub.scan.notify import send_task_notification
 from osh.hub.scan.xmlrpc_helper import fail_scan as h_fail_scan
 from osh.hub.scan.xmlrpc_helper import finish_scan as h_finish_scan
@@ -23,6 +27,8 @@ from osh.hub.scan.xmlrpc_helper import (prepare_version_retriever,
                                         scan_notification_email)
 from osh.hub.service.csmock_parser import unpack_and_return_api
 from osh.hub.waiving.results_loader import TaskResultsProcessor
+
+from osh.hub.osh_xmlrpc.osh_resalloc import ResallocWorkerFactory
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +58,6 @@ def finish_task(request, task_id):
             logger.error("Can't diff tasks %s %s: %s", base_task, task, ex)
             if not task.is_failed():
                 task.fail_task()
-
-
 # ET SCANS
 
 @validate_worker
@@ -187,6 +191,7 @@ def interrupt_tasks(request, task_list):
     response = kobo_interrupt_tasks(request, task_list)
 
     for task_id in task_list:
+        ResallocWorkerFactory.delete_resalloc_worker(task_id)
         task = Task.objects.get(id=task_id)
         if task.state != TASK_STATES["INTERRUPTED"]:
             continue
@@ -196,4 +201,34 @@ def interrupt_tasks(request, task_list):
             continue
         sb.scan.set_state(SCAN_STATES['FAILED'])
 
+    return response
+
+@validate_worker
+def open_task(request, task_id):
+    response = kobo_open_task(request, task_id)
+    logger.info("ResallocWorkerFactory.create_resalloc_worker_db_entry({})".format(task_id))
+    ResallocWorkerFactory.set_task_id_for_resalloc_mapping(task_id)
+    return response
+
+
+@validate_worker
+def close_task(request, task_id, task_result):
+    response = kobo_close_task(request, task_id, task_result)
+    ResallocWorkerFactory.delete_resalloc_worker(task_id)
+    return response
+
+
+# TODO: This would not work for user cancelled tasks.
+@validate_worker
+def cancel_task(request, task_id):
+    logger.debug("Cancelling task {}".format(task_id))
+    response =  kobo_cancel_task(request, task_id)
+    ResallocWorkerFactory.delete_resalloc_worker(task_id)
+    return response
+
+@validate_worker
+def fail_task(request, task_id, task_result):
+    logger.debug("Failed task {}".format(task_id))
+    response = kobo_fail_task(request, task_id, task_result)
+    ResallocWorkerFactory.delete_resalloc_worker(task_id)
     return response

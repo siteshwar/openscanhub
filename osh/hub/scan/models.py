@@ -1283,3 +1283,11 @@ class Profile(models.Model):
             # there are no arguments, this is not an error
             logger.info("No csmock arguments for profile '%s'", self)
             return ''
+
+class ResallocMapping(models.Model):
+    """
+    Resalloc ticket id to task mapping
+    """
+    ticket_id = models.PositiveIntegerField(unique=True, blank=False)
+    hostname = models.CharField(max_length=255)
+    task_id = models.PositiveIntegerField(blank=True, null=True)
