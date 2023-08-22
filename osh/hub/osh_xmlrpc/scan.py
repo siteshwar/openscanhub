@@ -14,6 +14,17 @@ from osh.hub.errata.scanner import (ClientDiffPatchesScanScheduler,
                                     ClientDiffScanScheduler,
                                     ClientScanScheduler)
 from osh.hub.scan.models import SCAN_STATES, ClientAnalyzer, Profile, Scan
+from django.conf import settings
+
+if settings.ENABLE_RESALLOC:
+    # These are only needed if resalloc is enabled
+    import socket
+    from kobo.hub import models
+    from django.template.loader import render_to_string
+    import tempfile
+    import os
+    from resalloc.client import Connection as ResallocConnection
+    from threading import Thread
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +40,59 @@ __all__ = (
     "get_filtered_scan_list",
 )
 
+def get_hostname_from_ip(ip_address):
+    hostname = socket.gethostbyaddr(ip_address)[0]
+    return hostname
+
+def create_worker(worker_name):
+    worker = models.Worker.create_worker(worker_name)
+    worker.max_load = 1
+    worker.arches.add(models.Arch.objects.get(name="noarch"))
+    worker.channels.add(models.Channel.objects.get(name="default"))
+    worker.save()
+    print(worker.name)
+    print(worker.worker_key)
+    return worker
+
+def start_worker(worker):
+    # Generate /etc/osh/worker.conf through jinja template
+    worker_conf = render_to_string("worker.conf.j2", {"OSH_HUB_URL":settings.OSH_HUB_URL, "OSH_WORKER_KEY": worker.worker_key})
+    print(worker_conf)
+    # Create a temporary file and save the template
+    temporary_file = tempfile.NamedTemporaryFile()
+    temporary_file.write(bytes(worker_conf.strip(), 'utf-8'))
+    # Is this safe to assume this would always work?
+    temporary_file.flush()
+    # and transfer it to new worker.
+    # Copy worker.conf to centos user's home directory
+    # This requires the hub to have ssh access to the new worker
+    logger.info("scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=20 -i {} {} centos@{}:worker.conf".format(settings.RESALLOC_WORKER_SSH_PRIVATE_KEY, temporary_file.name, worker.name))
+    scp_exit_status = os.system("scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=20 -i {} {} centos@{}:worker.conf".format(settings.RESALLOC_WORKER_SSH_PRIVATE_KEY, temporary_file.name, worker.name))
+    if scp_exit_status != 0:
+        logger.error("Failed to copy worker.conf to new worker {}".format(worker.name))
+    # Delete the worker configs from hub
+    temporary_file.close()
+    logger.info("ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=20 -i {} centos@{} 'sudo mv worker.conf /etc/osh/worker.conf && sudo chown root:root /etc/osh/worker.conf'".format(settings.RESALLOC_WORKER_SSH_PRIVATE_KEY, worker.name))
+    # /etc/osh/hub/id_rsa.worker
+    move_worker_conf_status = os.system("ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=20 -i {} centos@{} 'sudo mv worker.conf /etc/osh/worker.conf && sudo chown root:root /etc/osh/worker.conf'".format(settings.RESALLOC_WORKER_SSH_PRIVATE_KEY, worker.name))
+    if move_worker_conf_status != 0:
+        logger.error("Failed to move worker.conf to new worker {}".format(worker.name))
+    # Start the worker after this is finished
+    logger.info("ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=20 -i {} centos@{} 'sudo systemctl restart osh-worker'".format(settings.RESALLOC_WORKER_SSH_PRIVATE_KEY, worker.name))
+    start_worker_status = os.system("ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=20 -i {} centos@{} 'sudo systemctl restart osh-worker'".format(settings.RESALLOC_WORKER_SSH_PRIVATE_KEY, worker.name))
+    if start_worker_status != 0:
+        logger.error("Failed to start worker worker at {}".format(worker.name))
+
+
+def build_through_resalloc():
+    conn = ResallocConnection(settings.RESALLOC_SERVER)
+    ticket = conn.newTicket(settings.RESALLOC_WORKER_TAGS)
+    # TODO: How long shall we wait here?
+    ip_address = ticket.wait().strip()
+    # Hostname is used for authentication by kobo
+    hostname = get_hostname_from_ip(ip_address)
+    worker = create_worker(hostname)
+    start_worker(worker)
 
 def __client_build(request, options, Scheduler):
     """
@@ -38,7 +102,15 @@ def __client_build(request, options, Scheduler):
     options['user'] = request.user
     sched = Scheduler(options)
     sched.prepare_args()
-    return sched.spawn()
+    spawn_result =sched.spawn()
+
+    if settings.ENABLE_RESALLOC:
+        build_through_resalloc_thread = Thread(target = build_through_resalloc)
+        # Allocate worker through resalloc in a separate thread
+        # TODO: How long this thread should be allowed to run?
+        build_through_resalloc_thread.start()
+
+    return spawn_result
 
 
 @login_required

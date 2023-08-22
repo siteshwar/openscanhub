@@ -127,4 +127,10 @@ NOTIFICATION_EMAIL_ADDRESS = "no-reply@example.org"
 # E-mail address where notifications about failed/cancelled tasks are sent
 DEVEL_EMAIL_ADDRESS = "no-reply@example.org"
 
+ENABLE_RESALLOC = True
+RESALLOC_SERVER = "http://ip-172-31-11-111.us-west-2.compute.internal:49100"
+RESALLOC_WORKER_SSH_PRIVATE_KEY = "id_rsa"
+RESALLOC_WORKER_TAGS = ["arch_x86_64"]
+OSH_HUB_URL = "http://ec2-34-215-19-27.us-west-2.compute.amazonaws.com:8000/xmlrpc"
+
 ALLOWED_HOSTS = ['*']

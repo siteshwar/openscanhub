@@ -10,7 +10,7 @@ source containers/scripts/utils.sh
 CONTAINERS=(
     db
     osh-hub
-    osh-worker
+    # osh-worker
 )
 
 if [ -z "$IS_PODMAN" ]; then
@@ -56,7 +56,7 @@ main() {
 test_build_env() (
     test -d .git
 
-    for f in compose.yaml containers/{hub/{Dockerfile,run.sh},{worker,client}.Dockerfile}; do
+    for f in compose.yaml containers/{hub/{Dockerfile,run.sh},client.Dockerfile}; do
         test -f "$f"
     done
 

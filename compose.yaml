@@ -37,24 +37,6 @@ services:
     stdin_open: true
     tty: true
 
-  osh-worker:
-    image: osh-worker
-    build:
-      context: .
-      dockerfile: ./containers/worker.Dockerfile
-    container_name: osh-worker
-    hostname: osh-worker
-    depends_on:
-      - osh-hub
-    networks:
-      - internal-network
-    volumes:
-      - ./:/src:z
-      - coverage:/cov
-    privileged: true
-    stdin_open: true
-    tty: true
-
   osh-client:
     image: osh-client
     build:
