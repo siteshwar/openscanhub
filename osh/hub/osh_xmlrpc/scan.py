@@ -15,6 +15,9 @@ from osh.hub.errata.scanner import (ClientDiffPatchesScanScheduler,
                                     ClientScanScheduler)
 from osh.hub.scan.models import SCAN_STATES, ClientAnalyzer, Profile, Scan
 
+from django.conf import settings
+from osh.hub.osh_xmlrpc.osh_resalloc import ResallocWorkerFactory
+
 logger = logging.getLogger(__name__)
 
 __all__ = (
@@ -29,7 +32,6 @@ __all__ = (
     "get_filtered_scan_list",
 )
 
-
 def __client_build(request, options, Scheduler):
     """
     creates a user scan with given options and Scheduler
@@ -38,7 +40,16 @@ def __client_build(request, options, Scheduler):
     options['user'] = request.user
     sched = Scheduler(options)
     sched.prepare_args()
-    return sched.spawn()
+    spawn_result =sched.spawn()
+
+    # TODO: What is the right place to check if this thread is running?
+    # This should be done after the django server has started and it should
+    # be done periodically.
+    if settings.ENABLE_RESALLOC:
+        # Allocate worker through resalloc in a separate thread
+        ResallocWorkerFactory.check_poll_resalloc_workers_thread()
+
+    return spawn_result
 
 
 @login_required

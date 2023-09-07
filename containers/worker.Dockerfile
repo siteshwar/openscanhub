@@ -6,27 +6,24 @@ RUN dnf config-manager --set-enabled powertools
 WORKDIR /src
 
 ENV PYTHONPATH=.:kobo
-ENV OSH_WORKER_CONFIG_FILE=osh/worker/worker-local.conf
-
-RUN echo -e "max_parallel_downloads=20\nfastestmirror=True" >> /etc/dnf/dnf.conf
 
 RUN dnf -y --setopt=tsflags=nodocs install \
-    cppcheck \
-    csmock \
-    csmock-plugin-unicontrol \
-    file \
-    gzip \
     koji \
     python3-coverage \
-    python3-gssapi \
-    python36 \
-    xz
-
-RUN adduser csmock -G mock
+    python3
 
 # store coverage to a separate volume
 RUN printf '[run]\ndata_file = /cov/coverage\n' > /coveragerc
 
+### END OF COMMON PART
+
+RUN dnf -y --setopt=tsflags=nodocs install \
+    csmock \
+    file
+
+RUN adduser csmock -G mock
+
+ENV OSH_WORKER_CONFIG_FILE=osh/worker/worker-local.conf
 RUN touch /WORKER_IS_READY
 
 CMD coverage-3 run --parallel-mode --omit="*site-packages*,*kobo*," --rcfile=/coveragerc osh/worker/osh-worker -f

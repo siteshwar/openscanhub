@@ -11,6 +11,9 @@ import os
 
 DEBUG = True
 
+# where to read API keys from
+SECRETS_DIR = ".secrets"
+
 ADMINS = (
     ('Kamil Dudka', 'kdudka@redhat.com'),
 )
@@ -105,9 +108,7 @@ TASK_DIR = os.path.join(FILES_PATH, 'tasks')
 UPLOAD_DIR = os.path.join(FILES_PATH, 'upload')
 
 BZ_URL = "https://bugzilla.stage.redhat.com"
-BZ_API_KEY = "xxxxxx"
 JIRA_URL = "https://issues.stage.redhat.com"
-JIRA_API_KEY = "xxxxxx"
 
 ET_URL = 'https://errata-web-01.host.stage.eng.bos.redhat.com'
 
@@ -126,5 +127,12 @@ UMB_TOPIC_PREFIX = 'topic://VirtualTopic.eng.OpenScanHub.scan'
 NOTIFICATION_EMAIL_ADDRESS = "no-reply@example.org"
 # E-mail address where notifications about failed/cancelled tasks are sent
 DEVEL_EMAIL_ADDRESS = "no-reply@example.org"
+
+ENABLE_RESALLOC = True
+RESALLOC_SERVER = "http://ip-172-31-11-111.us-west-2.compute.internal:49100"
+RESALLOC_WORKER_SSH_PRIVATE_KEY = "id_rsa"
+RESALLOC_WORKER_TAGS = ["arch_x86_64"]
+RESALLOC_WORKER_COUNT = 16
+OSH_HUB_URL = "http://ec2-54-202-223-253.us-west-2.compute.amazonaws.com:8000/xmlrpc"
 
 ALLOWED_HOSTS = ['*']

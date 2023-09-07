@@ -5,7 +5,7 @@ Version:        %{version}
 Release:        1%{?dist}
 License:        GPL-3.0-or-later
 Summary:        Static and Dynamic Analysis as a Service
-Source:         %{name}-%{version}.tar.bz2
+Source:         %{name}-%{version}.tar.gz
 BuildArch:      noarch
 
 BuildRequires:  koji
@@ -57,6 +57,7 @@ OpenScanHub shared files for client, hub and worker.
 %package worker
 Summary: OpenScanHub worker
 Requires: csmock
+Requires: file
 Requires: koji
 Requires: python3-kobo-client
 Requires: python3-kobo-rpmlib
@@ -91,7 +92,6 @@ Requires: koji
 Requires: xz
 
 Requires: csdiff
-Requires: file
 Requires: python3-bugzilla
 Requires: python3-csdiff
 Requires: python3-jira
@@ -144,8 +144,8 @@ cp -a {,%{buildroot}%{python3_sitelib}/}osh/hub/static/
 # Temporarily provide /usr/bin/covscan for backward compatibility
 ln -s osh-cli %{buildroot}%{_bindir}/covscan
 
-# create /etc/osh/hub directory
-mkdir -p %{buildroot}%{_sysconfdir}/osh/hub
+# create /etc/osh/hub/secrets directory
+mkdir -p %{buildroot}%{_sysconfdir}/osh/hub/secrets
 
 # create /var/lib dirs
 mkdir -p %{buildroot}/var/lib/osh/hub/{tasks,upload,worker}
@@ -219,6 +219,9 @@ fi
 %ghost %attr(640,apache,apache) /var/log/osh/hub/hub.log
 %attr(775,root,apache) /var/lib/osh/hub
 %ghost %attr(640,root,apache) /var/lib/osh/hub/secret_key
+%dir %attr(775,root,apache) %{_sysconfdir}/osh/hub/secrets
+%ghost %attr(640,root,apache) %{_sysconfdir}/osh/hub/secrets/jira_secret
+%ghost %attr(640,root,apache) %{_sysconfdir}/osh/hub/secrets/bugzilla_secret
 
 %post hub
 exec &>> /var/log/osh/hub/post-install-%{name}-%{version}-%{release}.log
@@ -254,6 +257,9 @@ pg_isready -h localhost && %{python3_sitelib}/osh/hub/manage.py migrate
 
 
 %changelog
+* Tue Sep 05 2023 Kamil Dudka <kdudka@redhat.com> - 0.9.4-1
+- stabilize a new version of osh-client
+
 * Wed May 17 2023 Kamil Dudka <kdudka@redhat.com> - 0.9.3-1
 - rename covscan-* packages to osh-*
 
