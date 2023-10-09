@@ -48,4 +48,4 @@ jobs:
       trigger: commit
       owner: "@openscanhub"
       project: "devel"
-      branch: main
+      branch: github-138-test
