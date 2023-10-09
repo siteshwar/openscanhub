@@ -12,7 +12,6 @@ report bugs and feature requests on GitHub using the above URL.
 
 ### hub:
 - `csdiff`
-- `file`
 - `gzip`
 - `httpd`
 - `koji`
@@ -33,10 +32,11 @@ report bugs and feature requests on GitHub using the above URL.
 
 ### worker:
 - `csmock`
+- `file`
 - `koji`
 - `python3-kobo-client`
 - `python3-kobo-rpmlib`
-- `python3-kobo-worker`
+- `python3-kobo-worker >= 0.30.0`
 
 ### client:
 - `koji`

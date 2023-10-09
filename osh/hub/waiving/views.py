@@ -32,9 +32,8 @@ from osh.hub.waiving.models import (DEFECT_STATES, RESULT_GROUP_STATES,
                                     Waiver, WaivingLog)
 from osh.hub.waiving.reporting import bugzilla, jira
 from osh.hub.waiving.service import (apply_waiver, display_in_result,
-                                     get_defects_diff_display, get_last_waiver,
-                                     get_unwaived_rgs, get_waivers_for_rg,
-                                     waiver_condition)
+                                     get_last_waiver, get_unwaived_rgs,
+                                     get_waivers_for_rg, waiver_condition)
 
 logger = logging.getLogger(__name__)
 
@@ -216,9 +215,7 @@ def get_waiving_data(result_object, defect_type):
                                          result=result_object,
                                          defect_type=defect_type)
         except ObjectDoesNotExist:
-            output[group] = get_defects_diff_display(checker_group=group,
-                                                     result=result_object,
-                                                     defect_type=defect_type)
+            output[group] = {}
         else:
             count += 1
             view_data = display_in_result(rg)
@@ -260,7 +257,7 @@ class ResultsListView(ListView):
     paginate_by = 50
     template_name = "waiving/list.html"
     context_object_name = "scanbinding_list"
-    title = "List of all results"
+    title = "List of scan results"
 
     def order_scans(self):
         order_by = self.request.GET.get('order_by', None)
@@ -282,6 +279,9 @@ class ResultsListView(ListView):
             if order_by.startswith('-'):
                 order_prefix = '-'
                 order_by = order_by[1:]
+
+            if order_by not in order_by_mapping:
+                raise Http404('Unknown column to order by: ' + order_by)
 
             order = order_prefix + order_by_mapping[order_by]
         else:
@@ -325,6 +325,7 @@ class ResultsListView(ListView):
         context = super().get_context_data(**kwargs)
         context["search_form"] = self.search_form
         context['table_sort'] = self.table_sort
+        context['title'] = self.title
 
         # to make pagination work with filtering
         args = self.request.GET.copy()
@@ -543,7 +544,7 @@ def fixed_defects(request, sb_id, result_group_id):
     sb = get_object_or_404(ScanBinding, id=sb_id)
     context = get_result_context(request, sb)
 
-    context['active_group'] = ResultGroup.objects.get(id=result_group_id)
+    context['active_group'] = get_object_or_404(ResultGroup, id=result_group_id)
     context['defects'] = Defect.objects.filter(result_group=result_group_id,
                                                state=DEFECT_STATES['FIXED']).order_by("order")
     context['display_form'] = False

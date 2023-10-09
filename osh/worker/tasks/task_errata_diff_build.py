@@ -47,25 +47,13 @@ class ErrataDiffBuild(TaskBase):
         # (re)scan base if needed
         base_task_args = self.hub.worker.ensure_base_is_scanned_properly(scan_id, self.task_id)
         if base_task_args is not None:
-            subtask_id = self.spawn_subtask(*tuple(base_task_args))
+            subtask_id = self.spawn_subtask(*base_task_args)
             self.hub.worker.set_scan_to_basescanning(scan_id)
             self.hub.worker.assign_task(subtask_id)
             self.hub.worker.create_sb(subtask_id)
-            try:
-                self.wait()
-            except ValueError:
-                # there is a race condition here:
-                #   File "/usr/lib/python2.6/site-packages/osh/worker/tasks/task_errata_diff_build.py", line 60, in run
-                #     self.wait()
-                #   File "/usr/lib/python2.6/site-packages/kobo/worker/task.py", line 153, in wait
-                #     self._subtask_list.remove(i)
-                # ValueError: list.remove(x): x not in list
-                #
-                # FIXME: workaround it here for now
-                pass
-            self.hub.worker.set_scan_to_scanning(scan_id)
 
-        self.hub.worker.set_scan_to_scanning(scan_id)
+            self.wait()
+            self.hub.worker.set_scan_to_scanning(scan_id)
 
         scanning_args = self.hub.worker.get_scanning_args(scanning_session_id)
         add_args = scanning_args.get('csmock_args', '')
@@ -79,19 +67,27 @@ class ErrataDiffBuild(TaskBase):
                                                    koji_profile=koji_profile,
                                                    su_user=su_user)
             print('Retcode:', retcode)
-            if results is not None:
+            if results is None:
+                print("Task did not produce any results", file=sys.stderr)
+                self.hub.worker.fail_scan(scan_id, 'Empty task results')
+                self.fail()
+
+            try:
                 base_results = os.path.basename(results)
                 with open(results, 'rb') as f:
                     self.hub.upload_task_log(f, self.task_id, base_results)
-            if retcode > 0:
-                print(f"Scanning have not completed successfully ({retcode})",
-                      file=sys.stderr)
-                self.hub.worker.fail_scan(scan_id, f'csmock return code: {retcode}')
+            except OSError as e:
+                print("Reading task logs failed:", e, file=sys.stderr)
+                self.hub.worker.fail_scan(scan_id, f'Reading tak logs failed: {e}')
+                self.fail()
 
         if retcode > 0:
+            print(f"Scanning has not completed successfully ({retcode})",
+                  file=sys.stderr)
+            self.hub.worker.fail_scan(scan_id, f'csmock return code: {retcode}')
             self.fail()
-        else:
-            self.hub.worker.finish_scan(scan_id, base_results)
+
+        self.hub.worker.finish_scan(scan_id, base_results)
 
     @classmethod
     def notification(cls, hub, conf, task_info):
