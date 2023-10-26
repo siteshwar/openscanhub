@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block head %}
+<title>Register</title>
+{% endblock %}
+
+{% block content %}
+<h3>User Registration</h3>
+
+{% if form.errors %}
+<p class="error">{{ form.errors }}</p>
+{% endif %}
+
+<form method="POST">
+    {% csrf_token %}
+    <table class="details">
+        <tr>
+            <th>{{ form.username.label_tag }}</th>
+            <td>{{ form.username }}</td>
+        </tr>
+        <tr>
+            <th>{{ form.email.label_tag }}</th>
+            <td>{{ form.email }}</td>
+        </tr>
+       <tr>
+            <th>{{ form.password1.label_tag }}</th>
+            <td>{{ form.password1 }}</td>
+        </tr>
+       <tr>
+            <th>{{ form.password2.label_tag }}</th>
+            <td>{{ form.password2 }}</td>
+        </tr>
+    </table>
+
+    <button type="submit">Register</button>
+</form>
+<p>
+<u><b>NOTE</b>: This registration form is for prototype purpose only. We should be using FAS login in the production.</u>
+{% endblock %}

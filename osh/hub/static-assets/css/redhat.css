@@ -1,7 +1,7 @@
 #header {
-    background-color: #cc0000;
-    background: -moz-linear-gradient(top, #ff0000, #cc0000, #a60000);
-    background: -webkit-gradient(linear, left top, left bottom, from(#ff0000), to(#a60000), color-stop(0.5, #cc0000));
+    background-color: #0000cc;
+    background: -moz-linear-gradient(top, #0000ff, #0000cc, #0000a6);
+    background: -webkit-gradient(linear, left top, left bottom, from(#0000ff), to(#0000a6), color-stop(0.5, #0000cc));
 }
 
 #menu a.active {

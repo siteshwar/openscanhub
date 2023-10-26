@@ -5,6 +5,8 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic.base import TemplateView
 
+from osh.hub.views import register
+
 admin.autodiscover()
 
 
@@ -15,6 +17,7 @@ urlpatterns = [
     # to INSTALLED_APPS to enable admin documentation:
     # path('admin/doc/', include('django.contrib.admindocs.urls')),
 
+    path("register", register, name="register"),
     path("auth/", include("kobo.hub.urls.auth")),
     path("task/", include("osh.hub.scan.task_urls")),
     path("info/arch/", include("kobo.hub.urls.arch")),
