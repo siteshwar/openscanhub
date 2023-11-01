@@ -24,7 +24,7 @@ DATABASES = {
         'NAME': 'openscanhub',
         'USER': 'openscanhub',
         'PASSWORD': 'velryba',
-        'HOST': 'localhost',
+        'HOST': 'db',
         'PORT': '5432',
     },
 }
